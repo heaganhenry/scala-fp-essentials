@@ -16,6 +16,12 @@ abstract class LList[A] {
   def map[B](transformer: A => B): LList[B]
   def filter(predicate: A => Boolean): LList[A]
   def flatMap[B](transformer: A => LList[B]): LList[B]
+
+  // HOFs exercises
+  def foreach(function: A => Unit): Unit
+  def sort(compare: (A, A) => Int): LList[A]
+  def zipWith[B, T](list: LList[T], zip: (A, T) => B): LList[B]
+  def foldLeft[B](start: B)(operator: (B, A) => B): B
 }
 
 case class Empty[A]() extends LList[A] {
@@ -29,6 +35,14 @@ case class Empty[A]() extends LList[A] {
   override def map[B](transformer: A => B): LList[B] = Empty[B]()
   override def filter(predicate: A => Boolean): LList[A] = this
   override def flatMap[B](transformer: A => LList[B]): LList[B] = Empty[B]()
+
+  // HOFs exercises
+  override def foreach(function: A => Unit): Unit = ()
+  override def sort(compare: (A, A) => Int): LList[A] = this
+  override def zipWith[B, T](list: LList[T], zip: (A, T) => B): LList[B] =
+    if (!list.isEmpty) throw new IllegalArgumentException("Zipping lists of non-equal length")
+    else Empty()
+  override def foldLeft[B](start: B)(operator: (B, A) => B): B = start
 }
 
 case class Cons[A](override val head: A, override val tail: LList[A]) extends LList[A] {
@@ -90,6 +104,45 @@ case class Cons[A](override val head: A, override val tail: LList[A]) extends LL
   */
   override def flatMap[B](transformer: A => LList[B]): LList[B] =
     transformer(head) ++ tail.flatMap(transformer)
+
+  // HOFs exercises
+  override def foreach(function: A => Unit): Unit = {
+    function(head)
+    tail.foreach(function)
+  }
+
+  override def sort(compare: (A, A) => Int): LList[A] = {
+    /*
+      compare = x - y
+      insert(3, [1, 2, 4]) =
+      Cons(1, insert(3, [2, 4])) =
+      Cons(1, Cons(2, insert(3, [4]))) =
+      Cons(1, Cons(2, Cons(3, [4]))) = [1, 2, 3, 4]
+    */
+    // insertion sort, O(n^2), stack recursive
+    def insert(elem: A, sortedList: LList[A]): LList[A] =
+      if (sortedList.isEmpty) Cons(elem, Empty())
+      else if (compare(elem, sortedList.head) <= 0) Cons(elem, sortedList)
+      else Cons(sortedList.head, insert(elem, sortedList.tail))
+
+    val sortedTail = tail.sort(compare)
+    insert(head, sortedTail)
+  }
+
+  override def zipWith[B, T](list: LList[T], zip: (A, T) => B): LList[B] =
+    if (list.isEmpty) throw new IllegalArgumentException("Zipping lists of non-equal length")
+    else Cons(zip(head, list.head), tail.zipWith(list.tail, zip))
+
+  /*
+    [1, 2, 3, 4].foldLeft(0)(x + y) =
+    [2, 3, 4].foldLeft(1)(x + y) =
+    [3, 4].foldLeft(3)(x + y) =
+    [4].foldLeft(6)(x + y) =
+    []. foldLeft(10)(x + y) =
+    10
+  */
+  override def foldLeft[B](start: B)(operator: (B, A) => B): B =
+    tail.foldLeft(operator(start, head))(operator)
 }
 
 /**
@@ -151,7 +204,7 @@ object LListTest {
     println(first3Numbers_v2)
     println(first3Numbers_v2.isEmpty)
 
-    val someStrings = Cons("cat", Cons("dog", Empty()))
+    val someStrings = Cons("cat", Cons("dog", Cons("fish", Empty())))
     println(someStrings)
 
     val evenPredicate = new Function1[Int, Boolean] {
@@ -196,5 +249,11 @@ object LListTest {
     //  println(LList.find(first3Numbers, new Predicate[Int] {
     //    override def test(element: Int): Boolean = element > 5
     //  })) // throws a NSEException
+
+    // HOFs exercise testing
+    first3Numbers.foreach(println(_))
+    println(first3Numbers_v2.sort(_ - _))
+    println(first3Numbers.zipWith(someStrings, (num, str) => s"$num-$str"))
+    println(first3Numbers.foldLeft(0)((x, y) => x + y))
   }
 }
