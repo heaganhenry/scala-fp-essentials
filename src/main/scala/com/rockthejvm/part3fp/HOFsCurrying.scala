@@ -40,8 +40,8 @@ object HOFsCurrying {
     else (x: Int) => nTimes_v2(f, n-1)(f(x))
   }
 
-  val plusTenThousand = nTimes_v2(plusOne, 3) // po(po(po(po... risks SO if the arg is too big
-  val tenThousand_v2 = plusTenThousand(0)
+  val plusOneHundred = nTimes_v2(plusOne, 100) // po(po(po(po... risks SO if the arg is too big
+  val oneHundred = plusOneHundred(0)
 
   // currying = HOFs returning function instances
   val superAdder: Int => Int => Int = (x: Int) => (y: Int) => x + y
@@ -54,7 +54,7 @@ object HOFsCurrying {
   val standardFormat: (Double => String) = curriedFormatter("%4.2f") // (x: Double) => "%4.2f".format(x)
   val preciseFormat: (Double => String) = curriedFormatter("%10.8f") // (x: Double) => "%10.8f".format(x)
 
-/**
+  /**
  * 1. LList exercises
  *    - foreach(A => Unit): Unit
  *      [1,2,3].foreach(x => println(x))
@@ -72,8 +72,46 @@ object HOFsCurrying {
  *      1 + 2 = 3
  *      3 + 3 = 6
  *      6 + 4 = 10
+ *
+ * 2. toCurry(f: (Int, Int) => Int): Int => Int => Int
+ *    fromCurry(f: (Int => Int => Int)): (Int, Int) => Int
+ *
+ * 3. compose(f, g) => x => f(g(x))
+ *    andThen(f, g) => x => g(f(x))
  */
+
+  // 2
+  def toCurry[A, B, C](f: (A, B) => C): A => B => C =
+    x => y => f(x, y)
+
+  val superAdder_v2 = toCurry[Int, Int, Int](_ + _)
+  val superSum = superAdder_v2(2)(3) // 5
+
+  def fromCurry[A, B, C](f: A => B => C): (A, B) => C =
+    (x, y) => f(x)(y)
+
+  val simpleAdder = fromCurry(superAdder_v2)
+  val simpleSum = simpleAdder(4, 5) // 9
+
+  // 3
+  def compose[A, B, C](f: B => C, g: A => B): A => C =
+    x => f(g(x))
+
+  def andThen[A, B, C](f: A => B, g: B => C): A => C =
+    x => g(f(x))
+
+  val incrementer = (x: Int) => x + 1
+  val doubler = (x: Int) => 2 * x
+  val composedApplication = compose(incrementer, doubler)
+  val aSequencedApplication = andThen(incrementer, doubler)
+
   def main(args: Array[String]): Unit = {
-    println(tenThousand_v2)
+    println(tenThousand)
+    println(oneHundred)
+    println(standardFormat(Math.PI))
+    println(preciseFormat(Math.PI))
+    println(simpleAdder(2,78)) // 80
+    println(composedApplication(14)) // 29 = 2 * 14 + 1
+    println(aSequencedApplication(14)) // 30 = (14 + 1) * 2
   }
 }
