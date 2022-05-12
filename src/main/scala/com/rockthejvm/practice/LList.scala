@@ -14,8 +14,9 @@ abstract class LList[A] {
   infix def ++(anotherList: LList[A]): LList[A]
 
   def map[B](transformer: A => B): LList[B]
-  def filter(predicate: A => Boolean): LList[A]
   def flatMap[B](transformer: A => LList[B]): LList[B]
+  def filter(predicate: A => Boolean): LList[A]
+  def withFilter(predicate: A => Boolean): LList[A] = filter(predicate)
 
   // HOFs exercises
   def foreach(function: A => Unit): Unit
@@ -32,9 +33,9 @@ case class Empty[A]() extends LList[A] {
 
   override infix def ++(anotherList: LList[A]): LList[A] = anotherList
 
-  override def map[B](transformer: A => B): LList[B] = Empty[B]()
+  override def map[B](transformer: A => B): LList[B] = Empty()
+  override def flatMap[B](transformer: A => LList[B]): LList[B] = Empty()
   override def filter(predicate: A => Boolean): LList[A] = this
-  override def flatMap[B](transformer: A => LList[B]): LList[B] = Empty[B]()
 
   // HOFs exercises
   override def foreach(function: A => Unit): Unit = ()
@@ -82,6 +83,18 @@ case class Cons[A](override val head: A, override val tail: LList[A]) extends LL
 
   /*
     example
+    [1, 2, 3].flatMap(n => n + 1) =
+    [1, 2] ++ [2, 3].flatMap(trans) =
+    [1, 2] ++ [2, 3] ++ [3].flatMap(trans) =
+    [1, 2] ++ [2, 3] ++ [3, 4] ++ [].flatMap(trans) =
+    [1, 2] ++ [2, 3] ++ [3, 4] ++ [] =
+    [1, 2, 2, 3, 3, 4]
+*/
+  override def flatMap[B](transformer: A => LList[B]): LList[B] =
+    transformer(head) ++ tail.flatMap(transformer)
+
+  /*
+    example
     [1, 2, 3].filter(n % 2 == 0) =
     [2, 3].filter(n % 2 == 0) =
     new Cons(2, [3].filter(n % 2 == 0) =
@@ -92,18 +105,6 @@ case class Cons[A](override val head: A, override val tail: LList[A]) extends LL
   override def filter(predicate: A => Boolean): LList[A] =
     if (predicate(head)) Cons(head, tail.filter(predicate))
     else tail.filter(predicate)
-
-  /*
-    example
-    [1, 2, 3].flatMap(n => n + 1) =
-    [1, 2] ++ [2, 3].flatMap(trans) =
-    [1, 2] ++ [2, 3] ++ [3].flatMap(trans) =
-    [1, 2] ++ [2, 3] ++ [3, 4] ++ [].flatMap(trans) =
-    [1, 2] ++ [2, 3] ++ [3, 4] ++ [] =
-    [1, 2, 2, 3, 3, 4]
-  */
-  override def flatMap[B](transformer: A => LList[B]): LList[B] =
-    transformer(head) ++ tail.flatMap(transformer)
 
   // HOFs exercises
   override def foreach(function: A => Unit): Unit = {
@@ -159,28 +160,6 @@ case class Cons[A](override val head: A, override val tail: LList[A]) extends LL
       [1,2,3,4].filter(n % 2 == 0) = [2,4]
       [1,2,3].flatMap(n => [n, n+1]) => [1,2, 2,3, 3,4]
  */
-
-// (replaced with function types)
-//trait Predicate[T] {
-//  def test(element: T): Boolean // T => Boolean
-//}
-//
-//class EvenPredicate extends Predicate[Int] {
-//  override def test(element: Int): Boolean =
-//    element % 2 == 0
-//}
-//
-//trait Transformer[A, B] {
-//  def transform(value: A): B // A => B
-//}
-//
-//class Doubler extends Transformer[Int, Int] {
-//  override def transform(value: Int): Int = value * 2
-//}
-//
-//class DoublerList extends Transformer[Int, LList[Int]] {
-//  override def transform(value: Int): LList[Int] = Cons(value, Cons(value + 1, Empty()))
-//}
 
 object LList {
   @tailrec
@@ -257,3 +236,25 @@ object LListTest {
     println(first3Numbers.foldLeft(0)((x, y) => x + y))
   }
 }
+
+// (replaced with function types)
+//trait Predicate[T] {
+//  def test(element: T): Boolean // T => Boolean
+//}
+//
+//class EvenPredicate extends Predicate[Int] {
+//  override def test(element: Int): Boolean =
+//    element % 2 == 0
+//}
+//
+//trait Transformer[A, B] {
+//  def transform(value: A): B // A => B
+//}
+//
+//class Doubler extends Transformer[Int, Int] {
+//  override def transform(value: Int): Int = value * 2
+//}
+//
+//class DoublerList extends Transformer[Int, LList[Int]] {
+//  override def transform(value: Int): LList[Int] = Cons(value, Cons(value + 1, Empty()))
+//}
